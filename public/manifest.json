@@ -1,0 +1,17 @@
+{
+  "name": "StockMaint",
+  "short_name": "StockMaint",
+  "description": "Gestão de Estoque de Manutenção Industrial",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#0f172a",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "64x64",
+      "type": "image/x-icon"
+    }
+  ]
+}
