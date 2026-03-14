@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { StockBar } from '@/components/StockBar';
+
 import { Search } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -56,25 +56,35 @@ export default function Catalog() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {filtered.map((item: any) => (
           <Link key={item.id} to={`/item/${item.id}`}>
-            <Card className="bg-card border-border hover:border-primary/50 transition-colors cursor-pointer">
+            <Card className="bg-card border-border hover:border-primary/50 transition-colors cursor-pointer overflow-hidden">
+              {item.image_url && (
+                <div className="w-full h-48 overflow-hidden">
+                  <img src={item.image_url} alt={item.name} className="w-full h-full object-cover" />
+                </div>
+              )}
               <CardContent className="p-4 space-y-3">
                 <div className="flex items-center justify-between">
-                  <Badge style={{ backgroundColor: item.categories?.color + '20', color: item.categories?.color, borderColor: item.categories?.color }} variant="outline" className="text-xs">
-                    {item.categories?.icon} {item.categories?.name}
-                  </Badge>
-                  <span className="font-mono text-xs text-muted-foreground">{item.id}</span>
-                </div>
-                <div>
-                  <h3 className="font-semibold text-sm">{item.name}</h3>
-                  <p className="text-xs text-muted-foreground">{item.model} — {item.manufacturer}</p>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="font-mono text-sm">{item.qty} {item.unit}</span>
-                  {item.qty <= item.min_qty && (
-                    <Badge variant="destructive" className="text-xs">CRÍTICO</Badge>
+                  <span className="font-mono text-sm text-muted-foreground">{item.id}</span>
+                  {item.qty <= item.min_qty ? (
+                    <Badge variant="destructive" className="text-xs font-bold">Crítico</Badge>
+                  ) : (
+                    <Badge className="bg-success text-success-foreground text-xs font-bold">OK</Badge>
                   )}
                 </div>
-                <StockBar qty={item.qty} minQty={item.min_qty} />
+                <div>
+                  <h3 className="font-semibold text-base">{item.name}</h3>
+                  <p className="text-sm text-muted-foreground">{item.model}</p>
+                </div>
+                <div className="flex items-center justify-between pt-2 border-t border-border">
+                  <div>
+                    <span className="text-xs text-muted-foreground">Estoque</span>
+                    <p className="font-bold text-lg">{item.qty} <span className="text-sm font-normal text-muted-foreground">{item.unit}</span></p>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-xs text-muted-foreground">Mínimo</span>
+                    <p className="font-bold text-lg">{item.min_qty}</p>
+                  </div>
+                </div>
               </CardContent>
             </Card>
           </Link>
