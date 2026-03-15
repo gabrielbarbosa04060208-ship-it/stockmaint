@@ -1,14 +1,12 @@
 import { useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { StockBar } from '@/components/StockBar';
 import { MovementModal } from '@/components/MovementModal';
 import { useAuth } from '@/hooks/useAuth';
-import { MapPin, Wrench, FileText, Package } from 'lucide-react';
+import { ArrowLeft, Package } from 'lucide-react';
 
 export default function ItemDetail() {
   const { id } = useParams<{ id: string }>();
@@ -24,99 +22,156 @@ export default function ItemDetail() {
     enabled: !!id,
   });
 
+  const { data: movements } = useQuery({
+    queryKey: ['movements', id],
+    queryFn: async () => {
+      const { data } = await supabase.from('movements').select('*').eq('item_id', id!).order('created_at', { ascending: false }).limit(5);
+      return data;
+    },
+    enabled: !!id,
+  });
+
   if (isLoading) return <div className="flex items-center justify-center py-20 text-muted-foreground">Carregando...</div>;
   if (!item) return <div className="flex items-center justify-center py-20 text-muted-foreground">Item não encontrado.</div>;
 
-  const cat = item.categories as any;
-  const statusColor = item.qty === 0 ? 'text-destructive' : item.qty <= item.min_qty ? 'text-warning' : 'text-success';
-  const statusLabel = item.qty === 0 ? 'SEM ESTOQUE' : item.qty <= item.min_qty ? 'CRÍTICO' : 'OK';
-  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent(window.location.href)}`;
+  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(window.location.href)}`;
 
   return (
-    <div className="space-y-4 max-w-2xl mx-auto">
-      {/* Header */}
-      <div className="flex items-start justify-between">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <Badge style={{ backgroundColor: cat?.color + '20', color: cat?.color, borderColor: cat?.color }} variant="outline">
-              {cat?.icon} {cat?.name}
-            </Badge>
-            <span className="font-mono text-sm text-muted-foreground">{item.id}</span>
-          </div>
-          <h1 className="text-xl font-bold">{item.name}</h1>
-          <p className="text-sm text-muted-foreground">{item.model} — {item.manufacturer}</p>
-        </div>
-        <img src={qrUrl} alt="QR Code" className="rounded-md border border-border" width={100} height={100} />
-      </div>
+    <div className="space-y-6">
+      {/* Back link */}
+      <Link to="/catalog" className="inline-flex items-center gap-2 text-primary hover:underline font-medium">
+        <ArrowLeft className="h-4 w-4" /> Voltar ao Catálogo
+      </Link>
 
-      {/* Photo */}
-      {item.image_url ? (
-        <img src={item.image_url} alt={item.name} className="w-full h-48 object-cover rounded-lg border border-border" />
-      ) : (
-        <div className="w-full h-48 bg-secondary rounded-lg flex items-center justify-center">
-          <Package className="h-12 w-12 text-muted-foreground" />
-        </div>
-      )}
+      {/* Two-column layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6">
+        {/* Left column */}
+        <div className="space-y-6">
+          {/* Image */}
+          {item.image_url ? (
+            <img src={item.image_url} alt={item.name} className="w-full h-64 object-cover rounded-lg border border-border" />
+          ) : (
+            <div className="w-full h-64 bg-muted rounded-lg flex items-center justify-center border border-border">
+              <Package className="h-16 w-16 text-muted-foreground" />
+            </div>
+          )}
 
-      {/* Stock status */}
-      <Card className="bg-card border-border">
-        <CardContent className="p-4">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm text-muted-foreground">Estoque Atual</span>
-            <Badge variant={item.qty === 0 ? 'destructive' : item.qty <= item.min_qty ? 'outline' : 'default'} className={item.qty <= item.min_qty && item.qty > 0 ? 'border-warning text-warning' : ''}>
-              {statusLabel}
-            </Badge>
-          </div>
-          <div className="flex items-baseline gap-2">
-            <span className={`text-4xl font-mono font-bold ${statusColor}`}>{item.qty}</span>
-            <span className="text-sm text-muted-foreground">/ mín: {item.min_qty} {item.unit}</span>
-          </div>
-          <StockBar qty={item.qty} minQty={item.min_qty} className="mt-3" />
-        </CardContent>
-      </Card>
-
-      {/* Description */}
-      {item.description && (
-        <Card className="bg-card border-border">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm flex items-center gap-2"><FileText className="h-4 w-4" /> Descrição Técnica</CardTitle>
-          </CardHeader>
-          <CardContent><p className="text-sm text-muted-foreground">{item.description}</p></CardContent>
-        </Card>
-      )}
-
-      {/* Maintenance notes */}
-      {item.maintenance_notes && (
-        <Card className="bg-card border-success/20">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm flex items-center gap-2 text-success"><Wrench className="h-4 w-4" /> Notas de Manutenção</CardTitle>
-          </CardHeader>
-          <CardContent><p className="text-sm text-success/80">{item.maintenance_notes}</p></CardContent>
-        </Card>
-      )}
-
-      {/* Location */}
-      <Card className="bg-card border-border">
-        <CardContent className="p-4 flex items-center gap-3">
-          <MapPin className="h-5 w-5 text-primary" />
+          {/* ID and Title */}
           <div>
-            <p className="text-xs text-muted-foreground">Localização</p>
-            <p className="font-mono font-semibold">{item.location}</p>
+            <p className="text-sm text-primary font-mono mb-1">{item.id}</p>
+            <h1 className="text-2xl font-bold text-foreground">{item.name}</h1>
           </div>
-        </CardContent>
-      </Card>
 
-      {/* Action buttons - only for authenticated users */}
-      {user && (
-        <div className="grid grid-cols-2 gap-3">
-          <Button className="bg-destructive hover:bg-destructive/90 text-destructive-foreground" onClick={() => setModalType('saida')}>
-            📤 Registrar Saída
-          </Button>
-          <Button className="bg-success hover:bg-success/90 text-success-foreground" onClick={() => setModalType('entrada')}>
-            📥 Registrar Entrada
-          </Button>
+          {/* Info grid */}
+          <div className="grid grid-cols-2 gap-x-8 gap-y-4 border-t border-b border-border py-4">
+            <div>
+              <p className="text-sm text-muted-foreground">Modelo</p>
+              <p className="font-semibold text-foreground">{item.model}</p>
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Fabricante</p>
+              <p className="font-semibold text-foreground">{item.manufacturer}</p>
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Localização</p>
+              <p className="font-semibold text-foreground">{item.location}</p>
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Unidade</p>
+              <p className="font-semibold text-foreground">{item.unit}</p>
+            </div>
+          </div>
+
+          {/* Technical description */}
+          {item.description && (
+            <div>
+              <h2 className="font-semibold text-foreground mb-2">Descrição Técnica</h2>
+              <p className="text-muted-foreground">{item.description}</p>
+            </div>
+          )}
+
+          {/* Maintenance notes */}
+          {item.maintenance_notes && (
+            <Card className="bg-accent/30 border-accent">
+              <CardContent className="p-5">
+                <h3 className="font-semibold text-foreground mb-2">Notas de Manutenção</h3>
+                <p className="text-muted-foreground">{item.maintenance_notes}</p>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Recent movements */}
+          {movements && movements.length > 0 && (
+            <div>
+              <h2 className="font-semibold text-foreground mb-4">Movimentações Recentes</h2>
+              <div className="space-y-3">
+                {movements.map((mov) => (
+                  <Card key={mov.id} className="bg-card border-border">
+                    <CardContent className="p-4 flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <span className={`text-xs font-semibold px-2 py-1 rounded ${mov.type === 'saida' ? 'bg-destructive/10 text-destructive' : 'bg-success/10 text-success'}`}>
+                          {mov.type === 'saida' ? 'Saída' : 'Entrada'}
+                        </span>
+                        <span className="text-sm text-muted-foreground">{mov.reason}</span>
+                      </div>
+                      <div className="text-right">
+                        <p className={`font-semibold ${mov.type === 'saida' ? 'text-destructive' : 'text-success'}`}>
+                          {mov.type === 'saida' ? '-' : '+'}{mov.qty}
+                        </p>
+                        <p className="text-xs text-muted-foreground">{mov.date}</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
-      )}
+
+        {/* Right sidebar */}
+        <div className="space-y-4">
+          {/* Stock status */}
+          <Card className="bg-card border-border">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">Status do Estoque</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <p className="text-sm text-primary">Quantidade Atual</p>
+                <p className="text-4xl font-bold text-foreground">{item.qty}</p>
+                <p className="text-sm text-muted-foreground">{item.unit}</p>
+              </div>
+              <div className="border-t border-border pt-3">
+                <p className="text-sm text-primary">Estoque Mínimo</p>
+                <p className="text-2xl font-bold text-foreground">{item.min_qty}</p>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* QR Code */}
+          <Card className="bg-card border-border">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">QR Code</CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-col items-center">
+              <img src={qrUrl} alt="QR Code" className="w-48 h-48" />
+              <p className="text-sm font-mono text-muted-foreground mt-2">{item.id}</p>
+            </CardContent>
+          </Card>
+
+          {/* Action buttons */}
+          {user && (
+            <div className="space-y-3">
+              <Button className="w-full bg-destructive hover:bg-destructive/90 text-destructive-foreground h-12 text-base" onClick={() => setModalType('saida')}>
+                Registrar Saída
+              </Button>
+              <Button className="w-full bg-success hover:bg-success/90 text-success-foreground h-12 text-base" onClick={() => setModalType('entrada')}>
+                Registrar Entrada
+              </Button>
+            </div>
+          )}
+        </div>
+      </div>
 
       {modalType && (
         <MovementModal open={!!modalType} onClose={() => setModalType(null)} itemId={item.id} itemName={item.name} type={modalType} currentQty={item.qty} />
