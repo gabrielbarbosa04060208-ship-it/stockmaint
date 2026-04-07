@@ -34,7 +34,7 @@ export default function QRCodes() {
     const selectedItems = items.filter(i => selected.has(i.id));
     if (selectedItems.length === 0) return;
 
-    const html = `<!DOCTYPE html><html><head><title>QR Codes - StockMaint</title><style>
+    const html = `<!DOCTYPE html><html><head><title>QR Codes - StockFlow</title><style>
       body { font-family: Arial, sans-serif; margin: 0; padding: 10mm; }
       .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8mm; }
       .card { border: 1px solid #ccc; border-radius: 4px; padding: 4mm; text-align: center; page-break-inside: avoid; }
@@ -52,11 +52,31 @@ export default function QRCodes() {
           <p>📍 ${item.location}</p>
         </div>`).join('')}
       </div>
-      <script>window.onload=()=>window.print()</script>
     </body></html>`;
 
-    const w = window.open('', '_blank');
-    if (w) { w.document.write(html); w.document.close(); }
+    // Use iframe approach for better mobile compatibility
+    let iframe = document.getElementById('print-frame') as HTMLIFrameElement;
+    if (!iframe) {
+      iframe = document.createElement('iframe');
+      iframe.id = 'print-frame';
+      iframe.style.position = 'fixed';
+      iframe.style.top = '-10000px';
+      iframe.style.left = '-10000px';
+      iframe.style.width = '0';
+      iframe.style.height = '0';
+      document.body.appendChild(iframe);
+    }
+    const doc = iframe.contentDocument || iframe.contentWindow?.document;
+    if (doc) {
+      doc.open();
+      doc.write(html);
+      doc.close();
+      // Wait for images to load before printing
+      setTimeout(() => {
+        iframe.contentWindow?.focus();
+        iframe.contentWindow?.print();
+      }, 1000);
+    }
   };
 
   return (
